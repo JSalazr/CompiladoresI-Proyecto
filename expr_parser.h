@@ -18,7 +18,7 @@ private:
     void A();
     void B();
     void C();
-    void D();
+    void D(bool full_condition);
     void E();
     void F();
     void G();

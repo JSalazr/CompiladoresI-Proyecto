@@ -10,7 +10,7 @@ $(TARGET): $(OBJ_FILES)
 	g++ -std=c++11 -c -o $@ $<
 
 run: $(TARGET)
-	./$(TARGET) input1.py
+	./$(TARGET) tiny-python-samples/RelOperators.py
 
 clean:
 	rm -f *.o

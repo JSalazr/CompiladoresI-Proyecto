@@ -135,7 +135,7 @@ void Parser::B(){
         next_token();
         J();
     }else{
-        E();
+        D(true);
         J();
     }
 }
@@ -155,7 +155,7 @@ void Parser::C(){
     }
 }
 
-void Parser::D(){
+void Parser::D(bool full_conditon){
     if(current_token == Tokens::TRUE_TOKEN){
         next_token();
         return;
@@ -182,8 +182,10 @@ void Parser::D(){
             next_token();
             E();
         }else{
-            cerr << "Syntax error on line " << lexer.get_Line() << ", Expected condition but found "<< lexer.get_Lexeme() << endl;
-            exit(1);
+            if(!full_conditon){
+                cerr << "Syntax error on line " << lexer.get_Line() << ", Expected condition but found "<< lexer.get_Lexeme() << endl;
+                exit(1);
+            }
         }
     }
 }
@@ -325,7 +327,7 @@ void Parser::K(){
             exit(1);
         }
     }else{
-        D();
+        D(false);
         P();
     }
 }
