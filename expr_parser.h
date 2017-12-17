@@ -5,6 +5,7 @@
 #include <fstream>
 #include <functional>
 #include "expr_lexer.h"
+#include "ast.h"
 
 using namespace std;
 
@@ -15,31 +16,29 @@ public:
     }
     void parse();
 private:
-    void A();
-    void B();
-    void C();
-    void D(bool full_condition);
-    void E();
-    void F();
-    void G();
-    void H();
-    void I();
-    void J();
-    void K();
-    void L();
-    void M();
-    void N(); 
-    void O();
+    Statement* A();
+    StrExpr* B();
+    Expression* C();
+    Expression* D();
+    Expression* E();
+    Expression* F();
+    Statement* G();
+    Expression* H();
+    Statement* I();
+    StrExpr* J();
+    Expression* K();
+    Statement* M();
+    Expression* O();
     void P();
-    void Q();
+    Expression* Q();
     void R();
-    void S();
-    void T();
-    void U();
-    void V();
+    Expression* S();
+    Expression* T();
+    Expression* V();
     void next_token();
     Lexer &lexer;
     Tokens current_token;
+    string current_lexeme;
 };
 
 #endif

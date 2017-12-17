@@ -6,17 +6,22 @@
 
 void Parser::next_token(){
     current_token = lexer.get_Token();
+    current_lexeme = lexer.get_Lexeme();
 }
 
-void Parser::A(){
+Statement* Parser::A(){
+    Statement* to_return;
     if(current_token == Tokens::PRINT_TOKEN){
         next_token();
         if(current_token == Tokens::PAR_IZQ_TOKEN){
             next_token();
-            B();
+            StrExpr* to_print = B();
             if(current_token == Tokens::PAR_DER_TOKEN){
                 next_token();
-                I();
+                to_return = new PrintStatement(to_print);
+                Statement* next = I();
+                to_return->next = next;
+                return to_return;
             }else{
                 cerr << "Syntax error on line " << lexer.get_Line() << ", Expected ')' but found " << lexer.get_Lexeme() << endl;
                 exit(1);
@@ -26,11 +31,34 @@ void Parser::A(){
             exit(1);
         }
     }else if(current_token == Tokens::ID_TOKEN){
+        IDExpr* id = new IDExpr(current_lexeme);
+        Expression* expr;
         next_token();
-        U();
+        if(current_token == Tokens::EQUAL_TOKEN){
+            next_token();
+            expr = C();
+        }else if(current_token == Tokens::ARRAY_OPEN_TOKEN){
+            next_token();
+            Expression* pos = E();
+            id->pos = pos;
+            if(current_token == Tokens::ARRAY_CLOSED_TOKEN){
+                next_token();
+                expr = V();
+            }else{
+                cerr << "Syntax error on line " << lexer.get_Line() << ", Expected ']' but found " << lexer.get_Lexeme() << endl;
+                exit(1); 
+            }
+        }else{
+            cerr << "Syntax error on line " << lexer.get_Line() << ", Expected '=', or '[' but found " << lexer.get_Lexeme() << endl;
+            exit(1);
+        }
+        to_return = new AssignStatement(id, expr);
+        to_return->next = I();
+        return to_return;
     }else if(current_token == Tokens::FOR_TOKEN){
         next_token();
         if(current_token == Tokens::ID_TOKEN){
+            IDExpr* variable = new IDExpr(current_lexeme);
             next_token();
             if(current_token == Tokens::IN_TOKEN){
                 next_token();
@@ -38,18 +66,23 @@ void Parser::A(){
                     next_token();
                     if(current_token == Tokens::PAR_IZQ_TOKEN){
                         next_token();
-                        E();
+                        Expression* min = E();
                         if(current_token == Tokens::COMMA_TOKEN){
                             next_token();
-                            E();
+                            Expression* max = E();
                             if(current_token == Tokens::PAR_DER_TOKEN){
                                 next_token();
                                 if(current_token == Tokens::COLON_TOKEN){
                                     next_token();
                                     if(current_token == Tokens::INDENT_TOKEN){
                                         next_token();
-                                        A();
-                                        M();
+                                        Statement* true_block = A();
+                                        to_return = new ForStatement(variable, min, max, true_block);
+                                        if(current_token == Tokens::DEDENT_TOKEN){
+                                            next_token();
+                                            to_return->next =  A();
+                                        }
+                                        return to_return;
                                     }else{
                                         cerr << "Syntax error on line " << lexer.get_Line() << ", Expected identation" << endl;
                                         exit(1);
@@ -84,13 +117,20 @@ void Parser::A(){
         }
     }else if(current_token == Tokens::IF_TOKEN){
         next_token();
-        K();
+        Expression *condition = K();
         if(current_token == Tokens::COLON_TOKEN){
             next_token();
             if(current_token == Tokens::INDENT_TOKEN){
                 next_token();
-                A();
-                N();
+                Statement* true_block = A();
+                Statement* false_block;
+                to_return = new IfStatement(condition, true_block, NULL);
+                if(current_token == Tokens::DEDENT_TOKEN){
+                    next_token();
+                    ((IfStatement*)to_return)->false_block = G();
+                    to_return->next = A();
+                }
+                return to_return;
             }else{
                 cerr << "Syntax error on line " << lexer.get_Line() << ", Expected identation" << endl;
                 exit(1);
@@ -101,13 +141,18 @@ void Parser::A(){
         }
     }else if(current_token == Tokens::WHILE_TOKEN){
         next_token();
-        K();
+        Expression *condition = K();
         if(current_token == Tokens::COLON_TOKEN){
             next_token();
             if(current_token == Tokens::INDENT_TOKEN){
                 next_token();
-                A();
-                M();
+                Statement* true_block = A();
+                to_return = new WhileStatement(condition, true_block);
+                if(current_token == Tokens::DEDENT_TOKEN){
+                    next_token();
+                    to_return->next =  A();
+                }
+                return to_return;
             }else{
                 cerr << "Syntax error on line " << lexer.get_Line() << ", Expected identation" << endl;
                 exit(1);
@@ -118,105 +163,117 @@ void Parser::A(){
         }
     }else if(current_token == Tokens::PASS_TOKEN){
         next_token();
-        I();
+        return I();
     }else if(current_token == Tokens::NEW_LINE_TOKEN){
         next_token();
-        A();
-    }else if(current_token == Tokens::EOF_TOKEN){
-        return;
+        return A();
+    }else if(current_token == Tokens::EOF_TOKEN || current_token == Tokens::DEDENT_TOKEN){
+        return NULL;
     }else{
         cerr << "Syntax error on line " << lexer.get_Line() << ", Expected 'print', 'if', 'while', 'for', 'pass', an identifier or End of File but found " << lexer.get_Lexeme() << endl;
         exit(1);
     }
 }
 
-void Parser::B(){
+StrExpr* Parser::B(){
     if(current_token == Tokens::STR_TOKEN){
+        StrExpr *str = new StrExpr(current_lexeme);
         next_token();
-        J();
+        str->next = J();
+        return str;
     }else{
-        D(true);
-        J();
+        StrExpr* temp = (StrExpr*)K();
+        temp->next = J();
+        return temp;
     }
 }
 
-void Parser::C(){
+Expression* Parser::C(){
     if(current_token == Tokens::OPEN_BRACKET_TOKEN){
         next_token();
-        S();
+        Expression *temp = S();
+        temp->is_array = 1;
         if(current_token == Tokens::CLOSED_BRACKET_TOKEN){
             next_token();
+            return temp;
         }else{
             cerr << "Syntax error on line " << lexer.get_Line() << ", Expected '}' but found "<< lexer.get_Lexeme() << endl;
             exit(1);   
         }
     }else{
-        E();
+        return E();
     }
 }
 
-void Parser::D(bool full_conditon){
+Expression* Parser::D(){
     if(current_token == Tokens::TRUE_TOKEN){
         next_token();
-        return;
+        return new TrueExpr();
     }else if(current_token == Tokens::FALSE_TOKEN){
         next_token();
+        return new FalseExpr();
     }else{
-        E();
+        Expression* temp = E();
         if(current_token == Tokens::LESS_THAN_TOKEN){
             next_token();
-            E();
+            temp = new LTExpr(temp, E());
+            return temp;
         }else if(current_token == Tokens::MORE_THAN_TOKEN){
             next_token();
-            E();
+            temp = new GTExpr(temp, E());
+            return temp;
         }else if(current_token == Tokens::MORE_EQUAL_TOKEN){
             next_token();
-            E();
+            temp = new GTEExpr(temp, E());
+            return temp;
         }else if(current_token == Tokens::LESS_EQUAL_TOKEN){
             next_token();
-            E();
+            temp = new LTEExpr(temp, E());
+            return temp;
         }else if(current_token == Tokens::EQUAL_EQUAL_TOKEN){
             next_token();
-            E();
+            temp = new EQExpr(temp, E());
+            return temp;
         }else if(current_token == Tokens::NOT_EQUAL_TOKEN){
             next_token();
-            E();
+            temp = new NEExpr(temp, E());
+            return temp;
         }else{
-            if(!full_conditon){
-                cerr << "Syntax error on line " << lexer.get_Line() << ", Expected condition but found "<< lexer.get_Lexeme() << endl;
-                exit(1);
-            }
+            return temp;
         }
     }
 }
 
-void Parser::E(){
-    Q();
+Expression* Parser::E(){
+    Expression *temp = Q();
     while(current_token == Tokens::ADD_TOKEN || current_token == Tokens::SUB_TOKEN){
         if(current_token == Tokens::ADD_TOKEN){
             next_token();
-            Q(); 
+            temp = new AddExpr(temp, Q()); 
         }else if(current_token == Tokens::SUB_TOKEN){
             next_token();
-            Q(); 
+            temp = new SubExpr(temp, Q());
         }
     }
+    return temp;
 }
 
-void Parser::F(){
+Expression* Parser::F(){
     if(current_token == Tokens::NUM_TOKEN){
+        Expression* num = new NUMExpr(atoi(current_lexeme.c_str()));
         next_token();
-        return;
+        return num;
     }else if(current_token == Tokens::ID_TOKEN){
+        IDExpr* id = new IDExpr(current_lexeme);
         next_token();
-        H();
-        return;
+        id->pos = H();
+        return id;
     }else if(current_token == Tokens::PAR_IZQ_TOKEN){
         next_token();
-        E();
+        Expression * temp = E();
         if(current_token == Tokens::PAR_DER_TOKEN){
             next_token();
-            return;
+            return temp;
         }else{
             cerr << "Syntax error on line " << lexer.get_Line() << ", Expected ')' but found "<< lexer.get_Lexeme() << endl;
             exit(1);
@@ -226,10 +283,11 @@ void Parser::F(){
         if(current_token == Tokens::PAR_IZQ_TOKEN){
             next_token();
             if(current_token == Tokens::STR_TOKEN){
+                StrExpr *str = new StrExpr(current_lexeme);
                 next_token();
                 if(current_token == Tokens::PAR_DER_TOKEN){
                     next_token();
-                    return;
+                    return new InputExpr(str);
                 }else{
                     cerr << "Syntax error on line " << lexer.get_Line() << ", Expected ')' but found "<< lexer.get_Lexeme() << endl;
                     exit(1);
@@ -247,10 +305,11 @@ void Parser::F(){
         if(current_token == Tokens::PAR_IZQ_TOKEN){
             next_token();
             if(current_token == Tokens::ID_TOKEN){
+                string id = current_lexeme;
                 next_token();
                 if(current_token == Tokens::PAR_DER_TOKEN){
                     next_token();
-                    return;
+                    return new LenExpr(id);
                 }else{
                     cerr << "Syntax error on line " << lexer.get_Line() << ", Expected ')' but found "<< lexer.get_Lexeme() << endl;
                     exit(1);
@@ -269,15 +328,16 @@ void Parser::F(){
     }
 }
 
-void Parser::G(){
+Statement* Parser::G(){
     if(current_token == Tokens::ELSE_TOKEN){
         next_token();
         if(current_token == Tokens::COLON_TOKEN){
             next_token();
             if(current_token == Tokens::INDENT_TOKEN){
                 next_token();
-                A();
+                Statement* to_return = A();
                 R();
+                return to_return;
             }else{
                 cerr << "Syntax error on line " << lexer.get_Line() << ", Expected identation" << endl;
                 exit(1);
@@ -286,73 +346,75 @@ void Parser::G(){
             cerr << "Syntax error on line " << lexer.get_Line() << ", Expected ':' but found " << lexer.get_Lexeme() << endl;
             exit(1);
         }
+    }else{
+        return NULL;
     }
 }
 
-void Parser::H(){
+Expression* Parser::H(){
     if(current_token == Tokens::ARRAY_OPEN_TOKEN){
         next_token();
-        E();
+        Expression* to_return = E();
         if(current_token == Tokens::ARRAY_CLOSED_TOKEN){
             next_token();
+            return to_return;
         }else{
             cerr << "Syntax error on line " << lexer.get_Line() << ", Expected ']' but found " << lexer.get_Lexeme() << endl;
             exit(1); 
         }
     }
+    return new NUMExpr(-1);
 }
 
-void Parser::I(){
+Statement* Parser::I(){
     if(current_token == Tokens::NEW_LINE_TOKEN){
         next_token();
-        A();
+        return A();
     }
+    return NULL;
 }
 
-void Parser::J(){
+StrExpr* Parser::J(){
     if(current_token == Tokens::COMMA_TOKEN){
         next_token();
-        B();
+        return B();
     }
+    return NULL;
 }
 
-void Parser::K(){
+Expression* Parser::K(){
     if(current_token == Tokens::PAR_IZQ_TOKEN){
         next_token();
-        K();
+        Expression * to_return = K();
         if(current_token == Tokens::PAR_DER_TOKEN){
             next_token();
+            return to_return;
         }else{
             cerr << "Syntax error on line " << lexer.get_Line() << ", Expected ')' but found "<< lexer.get_Lexeme() << endl;
             exit(1);
         }
     }else{
-        D(false);
-        P();
+        Expression* condition = D();
+        while(current_token == Tokens::AND_TOKEN || current_token == Tokens::OR_TOKEN){
+            if(current_token == Tokens::AND_TOKEN){
+                next_token();
+                condition = new AndExpr(condition, K());
+            }else if(current_token == Tokens::OR_TOKEN){
+                next_token();
+                condition = new OrExpr(condition, K());
+            }
+        }
+        return condition;
     }
 }
 
-void Parser::M(){
-    if(current_token == Tokens::DEDENT_TOKEN){
+Expression* Parser::O(){
+    Expression *temp = F();
+    while(current_token == Tokens::EXP_TOKEN){
         next_token();
-        A();
+        temp = new ExpExpr(temp, E());
     }
-}
-
-void Parser::N(){
-    if(current_token == Tokens::DEDENT_TOKEN){
-        next_token();
-        G();
-        A();
-    }
-}
-
-void Parser::O(){
-    F();
-    if(current_token == Tokens::EXP_TOKEN){
-        next_token();
-        E();
-    }
+    return temp;
 }
 
 void Parser::P(){
@@ -362,25 +424,24 @@ void Parser::P(){
     }else if(current_token == Tokens::OR_TOKEN){
         next_token();
         K();
-    }else{
-
     }
 }
 
-void Parser::Q(){
-    O();
+Expression* Parser::Q(){
+    Expression *temp = O();
     while(current_token == Tokens::MULT_TOKEN || current_token == Tokens::DIV_TOKEN || current_token == Tokens::MOD_TOKEN){
         if(current_token == Tokens::MULT_TOKEN){
             next_token();
-            Q(); 
+            temp = new MultExpr(temp,Q()); 
         }else if(current_token == Tokens::DIV_TOKEN){
             next_token();
-            Q(); 
+            temp = new DivExpr(temp,Q()); 
         }else if(current_token == Tokens::MOD_TOKEN){
             next_token();
-            Q(); 
+            temp = new ModExpr(temp,Q()); 
         }
     }
+    return temp;
 }
 
 void Parser::R(){
@@ -389,49 +450,34 @@ void Parser::R(){
     }
 }
 
-void Parser::S(){
-    E();
-    T();
+Expression* Parser::S(){
+    Expression* temp = E();
+    temp->next = T();
+    return temp;
 }
 
-void Parser::T(){
+Expression* Parser::T(){
     if(current_token == Tokens::COMMA_TOKEN){
         next_token();
-        S();
+        return S();
     }
+    return NULL;
 }
 
-void Parser::U(){
+Expression* Parser::V(){
     if(current_token == Tokens::EQUAL_TOKEN){
         next_token();
-        C();
-        I();
-    }else if(current_token == Tokens::ARRAY_OPEN_TOKEN){
-        next_token();
-        E();
-        if(current_token == Tokens::ARRAY_CLOSED_TOKEN){
-            next_token();
-            V();
-        }else{
-            cerr << "Syntax error on line " << lexer.get_Line() << ", Expected ']' but found " << lexer.get_Lexeme() << endl;
-            exit(1); 
-        }
-    }else{
-        cerr << "Syntax error on line " << lexer.get_Line() << ", Expected '=', or '[' but found " << lexer.get_Lexeme() << endl;
-        exit(1);
+        return E();
     }
-}
-
-void Parser::V(){
-    if(current_token == Tokens::EQUAL_TOKEN){
-        next_token();
-        E();
-        I();
-    }
+    return NULL;
 }
 
 void Parser::parse(){
-    A();
+    Statement* tree = A();
+    while(tree != NULL){
+        tree->execute();
+        tree = tree->next;
+    }
     if(current_token != Tokens::EOF_TOKEN){
     }else{
         cout << "File Parsing ended succesfully" << endl;

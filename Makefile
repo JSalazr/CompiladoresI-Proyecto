@@ -1,5 +1,5 @@
 TARGET=sample1
-C_SRCFILES=main.cpp expr_lexer.cpp expr_parser.cpp
+C_SRCFILES=main.cpp expr_lexer.cpp expr_parser.cpp ast.cpp
 OBJ_FILES=${C_SRCFILES:.cpp=.o}
 .PHONY: clean
 
@@ -10,7 +10,7 @@ $(TARGET): $(OBJ_FILES)
 	g++ -std=c++11 -c -o $@ $<
 
 run: $(TARGET)
-	./$(TARGET) tiny-python-samples/RelOperators.py
+	./$(TARGET) input1.py
 
 clean:
 	rm -f *.o
