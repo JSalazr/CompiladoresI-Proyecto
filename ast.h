@@ -490,12 +490,14 @@ public:
     virtual void to_string() = 0;
     virtual void execute() = 0;
     Statement* next;
+    bool is_assign;
 };
 
 class PrintStatement: public Statement{
 public:
     PrintStatement(StrExpr *to_print){
         this->to_print = to_print;
+        is_assign = false;
     }
     void to_string(){
         cout<<"Print{ ";
@@ -512,6 +514,7 @@ public:
     AssignStatement(IDExpr* id, Expression* value){
         this->id = id;
         this->value = value;
+        is_assign = true;
     }
     void to_string(){
         cout<<"Assign{ ";
@@ -532,6 +535,7 @@ public:
         this->condition = condition;
         this->true_block = true_block;
         this->false_block = false_block;
+        is_assign = false;
     }
     void to_string(){
         cout<<"If{ ";
@@ -550,6 +554,7 @@ public:
     WhileStatement(Expression* condition, Statement* true_block){
         this->condition = condition;
         this->true_block = true_block;
+        is_assign = false;
     }
     void to_string(){
         cout<<"While{ ";
@@ -569,6 +574,7 @@ public:
         this->min = min;
         this->max = max;
         this->true_block = true_block;
+        is_assign = false;
     }
     void to_string(){
         cout<<"For{ ";

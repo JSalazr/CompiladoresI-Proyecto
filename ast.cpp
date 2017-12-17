@@ -1,6 +1,7 @@
 #include "ast.h"
 #include <map>
 #include <cmath>
+#include <list>
 
 using namespace std;
 
@@ -166,19 +167,25 @@ void PrintStatement::execute(){
                 cout << "False" << endl;
             }
         }else{
-            Expression* temp = ints[((IDExpr*)to_print)->id];
-            if(temp->is_array == 1){
-                cout << "set([";
-                cout << ((Expression*)temp)->value();
-                temp = (Expression*)temp->next;
-                while(temp != NULL){
-                    cout << ", ";
+            Expression* temp;
+            if(ints.find(((IDExpr*)to_print)->id) != ints.end()){
+                temp = ints[((IDExpr*)to_print)->id];
+                if(temp->is_array == 1){
+                    cout << "set([";
                     cout << ((Expression*)temp)->value();
                     temp = (Expression*)temp->next;
+                    while(temp != NULL){
+                        cout << ", ";
+                        cout << ((Expression*)temp)->value();
+                        temp = (Expression*)temp->next;
+                    }
+                    cout << "])" << endl;
+                }else{
+                    cout << ((Expression*)temp)->value() << endl;
                 }
-                cout << "])" << endl;
             }else{
-                cout << ((Expression*)temp)->value() << endl;
+                cerr << "ID not yet defined " << endl;
+                exit(1);
             }
         }
     }else{
@@ -196,19 +203,25 @@ void PrintStatement::execute(){
                     str += "False";
                 }
             }else{
-                Expression* temp1 = ints[((IDExpr*)temp)->id];
-                if(temp1->is_array == 1){
-                    str += "set([";
-                    str += std::to_string(((Expression*)temp1)->value());
-                    temp1 = (Expression*)temp1->next;
-                    while(temp1 != NULL){
-                        str += ", ";
+                Expression* temp1;
+                if(ints.find(((IDExpr*)temp)->id) != ints.end()){
+                    temp1 = ints[((IDExpr*)temp)->id];
+                    if(temp1->is_array == 1){
+                        str += "set([";
                         str += std::to_string(((Expression*)temp1)->value());
                         temp1 = (Expression*)temp1->next;
+                        while(temp1 != NULL){
+                            str += ", ";
+                            str += std::to_string(((Expression*)temp1)->value());
+                            temp1 = (Expression*)temp1->next;
+                        }
+                        str += "])";
+                    }else{
+                        str +=std::to_string(((Expression*)temp1)->value());
                     }
-                    str += "])";
                 }else{
-                    str +=std::to_string(((Expression*)temp1)->value());
+                    cerr << "ID not yet defined " << endl;
+                    exit(1);
                 }
             }
             if(temp->next != NULL)
@@ -282,43 +295,81 @@ void AssignStatement::execute(){
 
 void IfStatement::execute(){
     if(condition->value() > 0){
+        list<string> local_variables;
         Statement* temp = true_block;
         while(temp != NULL){
+            if(temp->is_assign){
+                if(ints.find(((AssignStatement*)temp)->id->id) == ints.end()){
+                    local_variables.push_front(((AssignStatement*)temp)->id->id);
+                }
+            }
             temp->execute();
             temp = temp->next;
         }
+        for (list<string>::iterator it=local_variables.begin(); it != local_variables.end(); ++it){
+            ints.erase(*it);
+        }
     }else{
+        list<string> local_variables;
         Statement* temp = false_block;
         while(temp != NULL){
+            if(temp->is_assign){
+                if(ints.find(((AssignStatement*)temp)->id->id) == ints.end()){
+                    local_variables.push_front(((AssignStatement*)temp)->id->id);
+                }
+            }
             temp->execute();
             temp = temp->next;
+        }
+        for (list<string>::iterator it=local_variables.begin(); it != local_variables.end(); ++it){
+            ints.erase(*it);
         }
     }
 }
 
 void WhileStatement::execute(){
+    list<string> local_variables;
     while(condition->value() > 0){
         Statement* temp = true_block;
         while(temp != NULL){
+            if(temp->is_assign){
+                if(ints.find(((AssignStatement*)temp)->id->id) == ints.end()){
+                    local_variables.push_front(((AssignStatement*)temp)->id->id);
+                }
+            }
             temp->execute();
             temp = temp->next;
         }
     }
+    for (list<string>::iterator it=local_variables.begin(); it != local_variables.end(); ++it){
+        ints.erase(*it);
+    }
 }
 
 void ForStatement::execute(){
-    Statement* assign = new AssignStatement(variable, min);
-    int a = min->value();
+    list<string> local_variables;
+    AssignStatement* assign = new AssignStatement(variable, min);
+    if(ints.find(assign->id->id) == ints.end()){
+        local_variables.push_front(assign->id->id);
+    }
     assign->execute();
     Expression* condition = new LTExpr(variable, max);
     while(condition->value() > 0){
         Statement* temp = true_block;
         while(temp != NULL){
+            if(temp->is_assign){
+                if(ints.find(((AssignStatement*)temp)->id->id) == ints.end()){
+                    local_variables.push_front(((AssignStatement*)temp)->id->id);
+                }
+            }
             temp->execute();
             temp = temp->next;
         }
-        a++;
-        assign = new AssignStatement(variable, new NUMExpr(a));
+        AddExpr* sum = new AddExpr(variable, new NUMExpr(1));
+        assign = new AssignStatement(variable, new NUMExpr(sum->value()));
         assign->execute();
+    }
+    for (list<string>::iterator it=local_variables.begin(); it != local_variables.end(); ++it){
+        ints.erase(*it);
     }
 }
