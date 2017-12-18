@@ -320,7 +320,8 @@ void WhileStatement::execute(){
 }
 
 void ForStatement::execute(){
-    AssignStatement* assign = new AssignStatement(variable, min);
+    int c = min->value();
+    AssignStatement* assign = new AssignStatement(variable, new NUMExpr(c));
     assign->execute();
     Expression* condition = new LTExpr(variable, max);
     while(condition->value() > 0){
@@ -329,8 +330,8 @@ void ForStatement::execute(){
             temp->execute();
             temp = temp->next;
         }
-        AddExpr* sum = new AddExpr(variable, new NUMExpr(1));
-        assign = new AssignStatement(variable, new NUMExpr(sum->value()));
+        c++;
+        assign = new AssignStatement(variable, new NUMExpr(c));
         assign->execute();
     }
 }
