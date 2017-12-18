@@ -1,5 +1,2 @@
-x = 10
-for x in range(0, 10):
-    y = x
-    print(y)
-print(y)
+x = [0,2,3]
+print(x)

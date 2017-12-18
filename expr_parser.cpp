@@ -189,11 +189,11 @@ StrExpr* Parser::B(){
 }
 
 Expression* Parser::C(){
-    if(current_token == Tokens::OPEN_BRACKET_TOKEN){
+    if(current_token == Tokens::ARRAY_OPEN_TOKEN){
         next_token();
         Expression *temp = S();
         temp->is_array = 1;
-        if(current_token == Tokens::CLOSED_BRACKET_TOKEN){
+        if(current_token == Tokens::ARRAY_CLOSED_TOKEN){
             next_token();
             return temp;
         }else{

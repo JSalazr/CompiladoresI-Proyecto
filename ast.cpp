@@ -171,7 +171,7 @@ void PrintStatement::execute(){
             if(ints.find(((IDExpr*)to_print)->id) != ints.end()){
                 temp = ints[((IDExpr*)to_print)->id];
                 if(temp->is_array == 1){
-                    cout << "set([";
+                    cout << "[";
                     cout << ((Expression*)temp)->value();
                     temp = (Expression*)temp->next;
                     while(temp != NULL){
@@ -179,7 +179,7 @@ void PrintStatement::execute(){
                         cout << ((Expression*)temp)->value();
                         temp = (Expression*)temp->next;
                     }
-                    cout << "])" << endl;
+                    cout << "]" << endl;
                 }else{
                     cout << ((Expression*)temp)->value() << endl;
                 }
@@ -207,7 +207,7 @@ void PrintStatement::execute(){
                 if(ints.find(((IDExpr*)temp)->id) != ints.end()){
                     temp1 = ints[((IDExpr*)temp)->id];
                     if(temp1->is_array == 1){
-                        str += "set([";
+                        str += "[";
                         str += std::to_string(((Expression*)temp1)->value());
                         temp1 = (Expression*)temp1->next;
                         while(temp1 != NULL){
@@ -215,7 +215,7 @@ void PrintStatement::execute(){
                             str += std::to_string(((Expression*)temp1)->value());
                             temp1 = (Expression*)temp1->next;
                         }
-                        str += "])";
+                        str += "]";
                     }else{
                         str +=std::to_string(((Expression*)temp1)->value());
                     }
