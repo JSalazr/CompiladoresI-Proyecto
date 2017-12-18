@@ -295,81 +295,42 @@ void AssignStatement::execute(){
 
 void IfStatement::execute(){
     if(condition->value() > 0){
-        list<string> local_variables;
         Statement* temp = true_block;
         while(temp != NULL){
-            if(temp->is_assign){
-                if(ints.find(((AssignStatement*)temp)->id->id) == ints.end()){
-                    local_variables.push_front(((AssignStatement*)temp)->id->id);
-                }
-            }
             temp->execute();
             temp = temp->next;
-        }
-        for (list<string>::iterator it=local_variables.begin(); it != local_variables.end(); ++it){
-            ints.erase(*it);
         }
     }else{
-        list<string> local_variables;
         Statement* temp = false_block;
         while(temp != NULL){
-            if(temp->is_assign){
-                if(ints.find(((AssignStatement*)temp)->id->id) == ints.end()){
-                    local_variables.push_front(((AssignStatement*)temp)->id->id);
-                }
-            }
             temp->execute();
             temp = temp->next;
-        }
-        for (list<string>::iterator it=local_variables.begin(); it != local_variables.end(); ++it){
-            ints.erase(*it);
         }
     }
 }
 
 void WhileStatement::execute(){
-    list<string> local_variables;
     while(condition->value() > 0){
         Statement* temp = true_block;
         while(temp != NULL){
-            if(temp->is_assign){
-                if(ints.find(((AssignStatement*)temp)->id->id) == ints.end()){
-                    local_variables.push_front(((AssignStatement*)temp)->id->id);
-                }
-            }
             temp->execute();
             temp = temp->next;
         }
     }
-    for (list<string>::iterator it=local_variables.begin(); it != local_variables.end(); ++it){
-        ints.erase(*it);
-    }
 }
 
 void ForStatement::execute(){
-    list<string> local_variables;
     AssignStatement* assign = new AssignStatement(variable, min);
-    if(ints.find(assign->id->id) == ints.end()){
-        local_variables.push_front(assign->id->id);
-    }
     assign->execute();
     Expression* condition = new LTExpr(variable, max);
     while(condition->value() > 0){
         Statement* temp = true_block;
         while(temp != NULL){
-            if(temp->is_assign){
-                if(ints.find(((AssignStatement*)temp)->id->id) == ints.end()){
-                    local_variables.push_front(((AssignStatement*)temp)->id->id);
-                }
-            }
             temp->execute();
             temp = temp->next;
         }
         AddExpr* sum = new AddExpr(variable, new NUMExpr(1));
         assign = new AssignStatement(variable, new NUMExpr(sum->value()));
         assign->execute();
-    }
-    for (list<string>::iterator it=local_variables.begin(); it != local_variables.end(); ++it){
-        ints.erase(*it);
     }
 }
